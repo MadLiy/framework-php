@@ -8,13 +8,16 @@ use Sthom\Kernel\Utils\Repository;
 
 class HomeController extends AbstractController
 {
-    public final function index(): void
+    final public function index(): void
     {
         $userRepo = new Repository(User::class);
-        $user = $userRepo->customQuery('SELECT * FROM user WHERE id = :id', ['id' => 2]);
-        dd($user);
-        $this->render('home/index.php');
+        $user = $userRepo->getById(1);
+        $this->render('home/index.php', [
+            'title' => "Page d'accueil",
+            'user' => $user,
+        ]);
     }
 
 
 }
+
