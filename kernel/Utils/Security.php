@@ -11,7 +11,6 @@ use Sthom\Kernel\Utils\Repository;
  */
 class Security
 {
-
     /**
      * Vérifie si l'utilisateur est connecté.
      *
@@ -30,13 +29,12 @@ class Security
      * }
      * ```
      */
-    public static final function isConnected(): bool
+    final public static function isConnected(): bool
     {
         // Vérifie si la clé IS_AUTHENTICATED existe dans la session et si sa valeur est `true`.
-        if (isset($_SESSION['IS_AUTHENTICATED']) && $_SESSION['IS_AUTHENTICATED'] === true) {
+        if (isset($_SESSION['USER']) && $_SESSION['USER'] instanceof UserInterface) {
             return true;
         }
-
         // Si les conditions ne sont pas remplies, retourne `false`.
         return false;
     }
@@ -44,7 +42,7 @@ class Security
     /**
      * Déconnecte l'utilisateur.
      *
-     * Cette méthode modifie la clé `IS_AUTHENTICATED` de la session pour la définir sur `false`.
+     * Cette méthode modifie la clé `USER` de la session pour la définir sur `false`.
      * Cela indique que l'utilisateur n'est plus connecté.
      *
      * @return void
@@ -55,10 +53,10 @@ class Security
      * echo "L'utilisateur a été déconnecté.";
      * ```
      */
-    public static final function disconnect(): void
+    final public static function disconnect(): void
     {
-        // Définit la clé IS_AUTHENTICATED à `false` dans la session.
-        $_SESSION['IS_AUTHENTICATED'] = false;
+        unset($_SESSION['USER']);
+        session_destroy();
     }
 
     /**
@@ -86,30 +84,46 @@ class Security
      * }
      * ```
      */
-    public static final function authenticate(Repository $repository, string $column, string $username, string $password): void
+    final public static function authenticate(string $identifier, string $username, string $password): void
     {
         /**
          * Étape 1 : Recherche l'utilisateur dans la base de données.
          * - Utilise le repository pour récupérer un utilisateur où `$column` correspond à `$username`.
          * - `$column` peut être `username`, `email`, ou tout autre champ unique d'authentification.
          */
-        $result = $repository->getByAttributes([$column => $username]);
 
-        /**
-         * Étape 2 : Si un utilisateur est trouvé, vérifier le mot de passe.
-         * - Utilise `password_verify` pour comparer le mot de passe fourni avec celui stocké dans la base de données.
-         */
-        if ($result) {
-            if (password_verify($password, $result->getPassword())) {
-                // Si le mot de passe est correct, connecter l'utilisateur.
-                $_SESSION['IS_AUTHENTICATED'] = true;
+        if (class_exists($_ENV['MODEL_NAMESPACE'] . 'User') && (in_array(UserInterface::class, class_implements($_ENV['MODEL_NAMESPACE'] . 'User')))) {
+            $model = $_ENV['MODEL_NAMESPACE'] . 'User';
+            $repository = new Repository($model);
+            $result = $repository->getByAttributes([$identifier => $username]);
+
+            if ($result && !empty($result)) {
+                $user = $result[0]; // Récupérer le premier et seul utilisateur
+                if (password_verify($password, $user->getPassword())) {
+                    $_SESSION['USER'] = $user;
+                } else {
+                    throw new \Exception('Mot de passe incorrect');
+                }
             } else {
-                // Si le mot de passe est incorrect, lever une exception.
-                throw new \Exception('Mot de passe incorrect');
+                // Si aucun utilisateur n'est trouvé, lever une exception.
+                throw new \Exception("L'utilisateur n'existe pas");
             }
         } else {
-            // Si aucun utilisateur n'est trouvé, lever une exception.
-            throw new \Exception("L'utilisateur n'existe pas");
+            throw new \Exception("Le modèle d'utilisateur n'existe pas ou n'implémente pas l'interface UserInterface");
         }
+    }
+
+    public static function hasRole(array $roles): bool
+    {
+        if (isset($_SESSION['USER']) && $_SESSION['USER'] instanceof UserInterface) {
+            $userRoles = $_SESSION['USER']->getRoles();
+
+            foreach ($roles as $role) {
+                if (in_array($role, $userRoles)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

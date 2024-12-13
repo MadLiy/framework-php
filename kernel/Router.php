@@ -12,7 +12,6 @@ namespace Sthom\Kernel;
  */
 class Router
 {
-
     /**
      * Méthode principale pour dispatcher une requête HTTP vers le contrôleur approprié.
      *
@@ -24,7 +23,7 @@ class Router
      * @return void
      * @throws \Exception Si aucune route correspondante n'est trouvée ou si une méthode HTTP invalide est utilisée.
      */
-    public final static function dispatch(): void
+    final public static function dispatch(): void
     {
         // Étape 1 : Inclure le fichier de configuration des routes
         // Ce fichier doit définir une constante `ROUTES` contenant toutes les routes de l'application.
@@ -59,27 +58,31 @@ class Router
              * - Les méthodes HTTP (GET, POST, etc.) peuvent être définies soit comme une chaîne, soit comme un tableau.
              * - On utilise `$_SERVER['REQUEST_METHOD']` pour récupérer la méthode HTTP utilisée par le client.
              */
-            switch (gettype($route['HTTP_METHODS'])) {
-                case 'string':
-                    // Si une seule méthode est autorisée, on vérifie qu'elle correspond à celle utilisée.
-                    if ($_SERVER['REQUEST_METHOD'] !== $route['HTTP_METHODS']) {
-                        throw new \Exception('Method not allowed'); // Erreur si la méthode est invalide
-                    }
-                    break;
-                case 'array':
-                    // Si plusieurs méthodes sont autorisées, on vérifie qu'elles incluent celle utilisée.
-                    if (!in_array($_SERVER['REQUEST_METHOD'], $route['HTTP_METHODS'])) {
-                        throw new \Exception('Method not allowed'); // Erreur si aucune méthode ne correspond
-                    }
-                    break;
-                default:
-                    throw new \Exception('Invalid HTTP_METHODS type'); // Erreur si le type est invalide
-            }
 
             /**
              * Étape 6 : Vérifier si l'URL demandée correspond à la route actuelle.
              */
             if ($path === $currentPath) {
+
+                switch (gettype($route['HTTP_METHODS'])) {
+                    case 'string':
+                        // Si une seule méthode est autorisée, on vérifie qu'elle correspond à celle utilisée.
+                        if ($_SERVER['REQUEST_METHOD'] !== $route['HTTP_METHODS']) {
+                            // dd($_SERVER['REQUEST_METHOD'] !== $route['HTTP_METHODS']);
+                            throw new \Exception('Method not allowed'); // Erreur si la méthode est invalide
+                        }
+                        break;
+                    case 'array':
+                        // Si plusieurs méthodes sont autorisées, on vérifie qu'elles incluent celle utilisée.
+                        if (!in_array($_SERVER['REQUEST_METHOD'], $route['HTTP_METHODS'])) {
+                            // dd($_SERVER['REQUEST_METHOD'] !== $route['HTTP_METHODS']);
+                            throw new \Exception('Method not allowed'); // Erreur si aucune méthode ne correspond
+                        }
+                        break;
+                    default:
+                        throw new \Exception('Invalid HTTP_METHODS type'); // Erreur si le type est invalide
+                }
+
                 /**
                  * Étape 7 : Construire dynamiquement le contrôleur et appeler la méthode correspondante.
                  * - Le contrôleur est défini par son namespace complet dans le fichier des routes.

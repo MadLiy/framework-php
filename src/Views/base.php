@@ -9,5 +9,6 @@
 </head>
 <body>
     <?php include_once $view; ?>
+        <img src="./../../assets/images/img_boy.png">
 </body>
 </html>
